@@ -1,0 +1,24 @@
+block content
+  aside.Login
+    h2 Login
+
+    form(action="/", method="post")
+      input(
+        type="text",
+        name="logUsername"
+        placeholder="Username"
+        required
+      )
+      input(
+        type="password",
+        name="logPassword"
+        placeholder="Password"
+        required
+      )
+      input(
+        type="submit",
+        value="Login"
+      )
+
+    br
+    a(href="/reset") Forgot Password

@@ -1,0 +1,137 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  font-size: 16px;
+  word-wrap: break-word;
+  box-sizing: border-box;
+  font-family: futura-pt,sans-serif,sans-serif;
+  color: #3c3c3c;
+  font-size: 16px;
+}
+
+*, *:before, *:after {
+  box-sizing: border-box;
+}
+
+a {
+  text-decoration: none;
+  position: relative;
+  color: #131311;
+}
+
+a::before {
+  position: absolute;
+  content: "";
+  height: 2px;
+  background-color: #fff;
+  bottom: -2px;
+  width: 0%;
+  transition: width 1s;
+}
+
+a:hover::before {
+  transition: width 0.5s;
+  width: 100%;
+}
+
+
+#wrapper {
+  height: 100vh;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+#Header {
+  background-color: #4D4D4D;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-around;
+}
+
+#Header a {
+  color: white;
+}
+
+.Profile {
+  padding: 60px;
+}
+
+.centerContent {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+aside {
+  margin: 20px;
+  padding: 40px;
+  border-radius: 4px;
+  background-color: #FFF200;
+}
+
+aside.Login {
+  transition: all 1s;
+}
+
+aside.Register {
+  transition: all 1s;
+}
+
+aside.Login h2,
+aside.Register h2 {
+  margin-top: 0;
+}
+
+input[type=text],
+input[type=password],
+input[type=email] {
+  width: 100%;
+  margin-bottom: 15px;
+  border: 0;
+  padding: 10px;
+  border-bottom: 1px solid #131311;
+  background: transparent;
+}
+
+input[type="button"],
+input[type="submit"] {
+  border: 1px solid #EFD430;
+  background: #131311;
+  padding: 15px 25px;
+  color: white;
+  font-weight: bold;
+}
+
+input[type="button"]:hover,
+input[type="submit"]:hover {
+  cursor: pointer;
+  transition: background-color 0.5s;
+  border: 1px solid #131311;
+  color: #3c3c3c;
+  background: #EFD430;
+}
+
+
+.Info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.Info .message {
+  background-color: #EFD430;
+  padding: 40px 60px;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+.Info .message .code {
+  font-size: 2rem;
+  margin-top: 20px;
+}

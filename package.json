@@ -1,0 +1,24 @@
+{
+  "name": "authenticationIntro",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/DDCSLearning/authenticationIntro.git",
+  "author": "DanielDeutsch <deudan1010@gmail.com>",
+  "license": "none",
+  "scripts": {
+    "start": "node src/app"
+  },
+  "dependencies": {
+    "bcrypt": "^3.0.0",
+    "body-parser": "^1.17.1",
+    "connect-mongo": "^2.0.1",
+    "dotenv": "^6.0.0",
+    "express": "^4.15.2",
+    "express-session": "^1.15.2",
+    "mongoose": "^5.2.7",
+    "nodemailer": "^4.6.7",
+    "password-generator": "^2.2.0",
+    "pug": "^2.0.3",
+    "uuid": "^3.3.2"
+  }
+}

@@ -1,0 +1,13 @@
+extends layout
+
+block content
+  .Profile
+    h1 Profile
+    p Username: #{user.username}
+    p E-Mail: #{user.email}
+
+    br
+
+    a(href="/changePassword") Change Password
+    br
+    a(href="/logout") Logout

@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  .centerContent
+    if user
+      h1 You are already logged-in
+    else
+      include login
+      include register
