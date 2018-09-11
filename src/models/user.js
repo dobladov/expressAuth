@@ -148,40 +148,31 @@ UserSchema.statics.checkUser = (email, username, callback) => {
   })
 }
 
-UserSchema.statics.renewal = (credentials, callback) => {
+UserSchema.statics.renewal = async (credentials) => {
 
-  bcrypt.hash(credentials.newPassword, 10, (error, newPassword) => {
+  try {
+    const newPassword = await bcrypt.hash(credentials.newPassword, 10)
+    const user = await User.findByIdAndUpdate(credentials.userId, {}, false).exec()
 
-    User.findByIdAndUpdate(credentials.userId, {}, false)
-      .exec((error, user) => {
-        if (error) {
-          return callback(error)
-        } else if (!user) {
-          const err = new Error('No user with this id.')
-          err.status = 404
-          return callback(err)
-        } else if (user) {
+    if (!user) {
+      const err = new Error('No user with this id.')
+      err.status = 404
+      throw err
+    } else {
+      const result = await bcrypt.compare(credentials.oldPassword, user.password)
 
-          bcrypt.compare(credentials.oldPassword, user.password, (error, result) => {
-            if (result === true) {
+      if (result === true) {
+        await User.findByIdAndUpdate(credentials.userId, {$set: {password: newPassword}}, false)
+      } else {
+        const err = new Error('Wrong old password')
+        err.status = 401
+        throw err
+      }
+    }
 
-              User.findByIdAndUpdate(credentials.userId, {$set: {password: newPassword}}, false)
-                .exec((error, user) => {
-                  if (error) {
-                    return callback(error)
-                  }
-                  return callback(null, user)
-              })
-
-            } else {
-              const err = new Error('Wrong old password')
-              err.status = 401
-              return callback(err)
-            }
-          })
-        }
-      })
-    })
+  } catch (error) {
+    throw error
+  }
 }
 
 UserSchema.statics.resetPassword = async (token) => {

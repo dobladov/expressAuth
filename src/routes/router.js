@@ -254,12 +254,12 @@ router.post('/password/reset', async (req, res, next) => {
 router.get('/password/renewal',
 // requiresLogin,
 (req, res, next) => {
-  res.render('changePassword')
+  res.render('renewal')
 })
 
 router.post('/password/renewal',
 // requiresLogin,
- (req, res, next) => {
+async (req, res, next) => {
 
   const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
@@ -274,21 +274,20 @@ router.post('/password/renewal',
     }
 
     if (req.body.newPassword === req.body.repeatPassword) {
-      User.renewal({newPassword: req.body.newPassword, oldPassword: req.body.oldPassword, userId: req.session.userId}, (err, user) => {
-        if (err) {
-          return next(err)
-        } else {
-          req.session.destroy(error => {
-            if (error) {
-              return next(error)
-            } else {
-              json
-                ? res.json({ message: `Password changed correctly go to /login` })
-                : res.render('info', { message: `Password changed correctly <a href="/">Go to Login</a>` })
-            }
-          })
-        }
-      })
+      try {
+        await User.renewal({newPassword: req.body.newPassword, oldPassword: req.body.oldPassword, userId: req.session.userId})
+        req.session.destroy(error => {
+          if (error) {
+            return next(error)
+          } else {
+            json
+              ? res.json({ message: `Password changed correctly go to /login` })
+              : res.render('info', { message: `Password changed correctly <a href="/">Go to Login</a>` })
+          }
+        })
+      } catch (error) {
+        return next(err)
+      }
     } else {
       const err = new Error(`Passwords don't match`)
       err.status = 400
