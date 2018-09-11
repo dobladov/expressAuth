@@ -54,7 +54,7 @@ router.post('/registration', (req, res, next) => {
       verifyCode
     }
 
-    User.checkUser(req.body.email, req.body.username, (error, validated, user) => {
+    User.checkUser(req.body.email, req.body.username, async (error, validated, user) => {
 
         if (error) {
           return next(error)
@@ -160,25 +160,23 @@ router.get('/resend', (req, res, next) => {
 
 })
 
-router.get('/verification', (req, res, next) => {
+router.get('/verification', async (req, res, next) => {
 
   const token = req.query.token
   const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
   if (token) {
-    User.verification(token, (error, user) => {
-      if (error || !user) {
-        const err = new Error(error)
-        err.status = 403
-        return next(err)
-      } else {
-        req.session.userId = user._id
-        json
-          ? res.json({ message: `Verification Correct, go to your profile`})
-          : res.render('info', { message: `Verification Correct, go to your profile <a type="button" href="/profile">Profile</a>` })
-          // return res.redirect('/profile')
-      }
-    })
+    try {
+      const user = await User.verification(token)
+      req.session.userId = user._id
+      json
+        ? res.json({ message: `Verification Correct, go to your profile`})
+        : res.render('info', { message: `Verification Correct, go to your profile <a type="button" href="/profile">Profile</a>` })
+    } catch (error) {
+      const err = new Error(error)
+      err.status = 403
+      return next(err)
+    }
   } else {
     const err = new Error('Token not present')
     err.status = 499
@@ -205,20 +203,27 @@ router.get('/profile', requiresLogin, (req, res, next) => {
     })
 })
 
-router.get('/password/reset', (req, res, next) => {
+router.get('/password/reset', async (req, res, next) => {
 
+  /// if token do different
   const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
+  const token = (req.query && req.query.code) || null
 
-  if (req.query.code) {
-    User.resetPassword(req.query.code, (error, newPassword) => {
-      if (error) {
-        return next(error)
+  if (token) {
+    try {
+      const newPassword = await User.resetPassword(token)
+      json
+        ? res.json({message: `Your new password is ${newPassword}`})
+        : res.render('info', { message: `Your new password is <b>${newPassword}</b>` })
+
+    } catch (error) {
+      if (json) {
+        res.json({message: `Your new password is ${newPassword}`})
       } else {
-        json
-          ? res.json({message: `Your new password is ${newPassword}`})
-          : res.render('info', { message: `Your new password is <b>${newPassword}</b>` })
+        const err = new Error(error)
+        return next(err)
       }
-    })
+    }
   } else {
     json
       ? res.json({message: `You must provide a code`})

@@ -39,57 +39,6 @@ const UserSchema = new mongoose.Schema({
   }
 })
 
-// UserSchema.statics.authenticate = async (username, password) => {
-
-//   try {
-//     const user = await User.findOne({}).exec()
-
-//     if (user) {
-
-
-//     }
-
-
-//   } catch (error) {
-//     const err = error
-//     err.status = 401
-//     throw err
-//   }
-
-
-//   await User.findOne({ username })
-//     .exec((error, user) => {
-
-//       if (error) {
-//         return callback(error)
-//       } else if (!user) {
-//         const err = new Error('User not found.')
-//         err.status = 401
-//         return callback(err)
-//       }
-
-//       if (user.verified === false) {
-//         return callback(null, false, user)
-//       }
-
-//       if (user.enabled === false) {
-//         const err = new Error('User not active.')
-//         err.status = 401
-//         return callback(err)
-//       }
-
-//       bcrypt.compare(password, user.password, (error, result) => {
-//         if (result === true) {
-//           return callback(null, null, user)
-//         } else {
-//           const err = new Error('Wrong email or password.')
-//           err.status = 401
-//           return callback(err)
-//         }
-//       })
-//     })
-// }
-
 UserSchema.statics.authenticate = async (username, password) => {
 
   const user = await User.findOne({ username }).exec()
@@ -115,40 +64,6 @@ UserSchema.statics.authenticate = async (username, password) => {
   }
 
 }
-
-// UserSchema.statics.authenticate = (username, password, callback) => {
-//   User.findOne({ username })
-//     .exec((error, user) => {
-
-//       if (error) {
-//         return callback(error)
-//       } else if (!user) {
-//         const err = new Error('User not found.')
-//         err.status = 401
-//         return callback(err)
-//       }
-
-//       if (user.verified === false) {
-//         return callback(null, false, user)
-//       }
-
-//       if (user.enabled === false) {
-//         const err = new Error('User not active.')
-//         err.status = 401
-//         return callback(err)
-//       }
-
-//       bcrypt.compare(password, user.password, (error, result) => {
-//         if (result === true) {
-//           return callback(null, null, user)
-//         } else {
-//           const err = new Error('Wrong email or password.')
-//           err.status = 401
-//           return callback(err)
-//         }
-//       })
-//     })
-// }
 
 UserSchema.statics.verification = async (token) => {
 
@@ -178,7 +93,6 @@ UserSchema.statics.verification = async (token) => {
     throw error
   }
 
-
 }
 
 
@@ -203,9 +117,9 @@ UserSchema.statics.reset = (email, callback) => {
               Email.send(
                 email,
                 "Reset Link ✔",
-                `Go to http://localhost:3000/reset?code=${resetCode} to reset your account password`,
+                `Go to http://localhost:3000/password/reset?code=${resetCode} to reset your account password`,
                 `<b>Follow
-                  <a href="http://localhost:3000/reset?code=${resetCode}">this link</a>
+                  <a href="http://localhost:3000/password/reset?code=${resetCode}">this link</a>
                   to reset your account password</b>`)
                 .then(info =>  console.info(info))
                 .catch(error =>  console.warn(error))
@@ -271,31 +185,53 @@ UserSchema.statics.renewal = (credentials, callback) => {
     })
 }
 
-UserSchema.statics.resetPassword = (code, callback) => {
+UserSchema.statics.resetPassword = async (token) => {
 
   const newPassword = generatePassword()
-  const hash = bcrypt.hash(newPassword, 10, (err, hash) => {
+  const hash = await bcrypt.hash(newPassword, 10)
 
-    User.findOneAndUpdate({resetCode: code}, {$set: {password: hash, resetCode: null}}, false)
-    .exec((err, user) => {
-      if (err) {
-        console.warn(err)
-      } else if (!user) {
-        const err = new Error('No user with this code.')
-        err.status = 404
-        return callback(err)
-      } else if (user) {
-        Email.send(
-          user.email,
-          "New password ✔",
-          `Your new password is ${newPassword}`,
-          `Your new password is <b>${newPassword}</b>`)
-          .then(info =>  console.info(info))
-          .catch(error =>  console.warn(error))
-        return callback(null, newPassword)
-      }
-    })
-  })
+  try {
+    console.log(token);
+
+    const user = await User.findOneAndUpdate({resetCode: token}, {$set: {password: hash, resetCode: null}}, false).exec()
+
+    if (!user) {
+      const err = new Error('No user with this code.')
+      err.status = 404
+      throw err
+    } else {
+      Email.send(
+        user.email,
+        "New password ✔",
+        `Your new password is ${newPassword}`,
+        `Your new password is <b>${newPassword}</b>`)
+        .then(info =>  console.info(info))
+        .catch(error =>  console.warn(error))
+      return newPassword
+    }
+  } catch (error) {
+    throw error
+  }
+
+  //   User.findOneAndUpdate({resetCode: token}, {$set: {password: hash, resetCode: null}}, false)
+  //   .exec((err, user) => {
+  //     if (err) {
+  //       console.warn(err)
+  //     } else if (!user) {
+  //       const err = new Error('No user with this code.')
+  //       err.status = 404
+  //       return callback(err)
+  //     } else if (user) {
+  //       Email.send(
+  //         user.email,
+  //         "New password ✔",
+  //         `Your new password is ${newPassword}`,
+  //         `Your new password is <b>${newPassword}</b>`)
+  //         .then(info =>  console.info(info))
+  //         .catch(error =>  console.warn(error))
+  //       return callback(null, newPassword)
+  //     }
+  //   })
 }
 
 
