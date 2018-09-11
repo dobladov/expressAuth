@@ -112,6 +112,12 @@ const proxy = async (clientReq, clientRes) => {
 
       proxyReq.setHeader('X-user', JSON.stringify(user))
 
+      proxyReq.on('error', error => {
+        console.warn("Error requesting target:", error.message)
+        clientRes.writeHead(400, { 'Content-Type': 'text/plain' })
+        clientRes.end(`Bad Request: ${error.message}`)
+      })
+
       proxyReq.on('response', proxyRes => {
         proxyRes.pipe(clientRes).on('finish', () => clientRes.end())
       })

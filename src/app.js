@@ -2,5 +2,5 @@ const dotenv = require('dotenv')
 
 dotenv.config()
 
-// require('./api')
+require('./api')
 require('./proxy')
