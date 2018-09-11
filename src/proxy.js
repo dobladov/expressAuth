@@ -101,9 +101,6 @@ const proxy = async (clientReq, clientRes) => {
 
     const forwardREQUEST = await evaluate(user, filteredRoutes.slice(-1).pop())
 
-    console.log(clientReq.headers);
-
-
     if (forwardREQUEST) {
       const proxyReq = http.request({
         host: '192.168.2.46', // We need some logic for this to get from targets
