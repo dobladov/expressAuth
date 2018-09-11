@@ -2,6 +2,9 @@ const router = require('express').Router()
 const uuidv4 = require('uuid/v4')
 
 const User = require('../models/user')
+const Groups = require('../models/groups')
+const Routes = require('../models/routes')
+
 const Email = require('../email')
 
 function requiresLogin(req, res, next) {
@@ -14,15 +17,22 @@ function requiresLogin(req, res, next) {
   }
 }
 
-router.get('/test', (req, res, next) => {
-  res.render('info', { code: 404, message: 'Hello there!'})
-})
-
 router.get('/', (req, res, next) => {
-  res.render('user', { title: ' - Login - Register', user: (req.session && req.session.userId) || null })
+
+  const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
+
+  json
+    ? res.json({messge: "Loading home"})
+    : res.render('home', { title: ' - Home', user: (req.session && req.session.userId) || null })
 })
 
-router.post('/', (req, res, next) => {
+router.get('/registration', (req, res, next) => {
+  res.render('registration', { title: ' - Registration', user: (req.session && req.session.userId) || null })
+})
+
+router.post('/registration', (req, res, next) => {
+
+  const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
   if (req.body.password !== req.body.passwordConf) {
     const err = new Error('Passwords do not match')
@@ -49,41 +59,60 @@ router.post('/', (req, res, next) => {
         if (error) {
           return next(error)
         } else if (validated) {
-          res.render('info', { message: 'This user is already register' })
+          json
+            ? res.json({ message: 'This user is already register' })
+            : res.render('info', { message: 'This user is already register' })
         } else if (validated === false && user) {
-          res.render('info', { message: `This user is not validated <a href="/resend?username=${user.username}">Resend email</a>` })
+          json
+            ? res.json({ message: `This user is not validated got to /resend?username=${user.username}" to Resend email` })
+            : res.render('info', { message: `This user is not validated <a href="/resend?username=${user.username}">Resend email</a>` })
         } else if (!user) {
 
-          User.create(userData, (error, user) => {
-            if (error) {
-              return next(error)
-            } else {
+          try {
+            const user = await User.register(
+              userData.email,
+              userData.username,
+              userData.password,
+              userData.verifyCode
+            )
+
+            if (user) {
               Email.send(
                 req.body.email,
                 `Hello ${userData.username}`,
-                `Go to http://localhost:3000/verify?token=${verifyCode} to verify your account`,
+                `Go to http://localhost:3000/verification?token=${verifyCode} to verify your account`,
                 `<b>Follow
-                  <a href="http://localhost:3000/verify?token=${verifyCode}">this link</a> to verify your account</b>`,
-                ).catch(error =>  console.warn(error))
-              res.render('info', { message: `A message was sent to ${req.body.email}. Go to your email to verify your account` })
+                  <a href="http://localhost:3000/verification?token=${verifyCode}">this link</a> to verify your account</b>`,
+              ).catch(error =>  console.warn(error))
+
+              json
+                ? res.json({ message: `A message was sent to ${req.body.email}. Go to your email to verify your account`})
+                : res.render('info', { message: `A message was sent to ${req.body.email}. Go to your email to verify your account` })
             }
-          })
+
+          } catch (error) {
+            next(error)
+          }
         }
     })
-  } else if (req.body.logUsername && req.body.logPassword) {
-    User.authenticate(req.body.logUsername, req.body.logPassword, (error, verified, user) => {
-      if (error || !user) {
-        const err = new Error(error)
-        err.status = 401
-        return next(err)
-      } else if (verified === false && user) {
-        res.render('info', { message: `This user is not validated <a href="/resend?username=${user.username}">Resend email</a>` })
-      } else {
-        req.session.userId = user._id
-        return res.redirect('/profile')
-      }
-    })
-  } else {
+  }
+
+  // NOT USING AUTH FROM UI SO IT'S COMMENTED FOR NOW
+  // else if (req.body.logUsername && req.body.logPassword) {
+  //   User.authenticate(req.body.logUsername, req.body.logPassword, (error, verified, user) => {
+  //     if (error || !user) {
+  //       const err = new Error(error)
+  //       err.status = 401
+  //       return next(err)
+  //     } else if (verified === false && user) {
+  //       res.render('info', { message: `This user is not validated <a href="/resend?username=${user.username}">Resend email</a>` })
+  //     } else {
+  //       req.session.userId = user._id
+  //       return res.redirect('/profile')
+  //     }
+  //   })
+  // }
+   else {
     const err = new Error('All fields required.')
     err.status = 400
     return next(err)
@@ -92,6 +121,8 @@ router.post('/', (req, res, next) => {
 
 router.get('/resend', (req, res, next) => {
 
+  const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
+
   if (req.query.username) {
 
     User.checkUser('', req.query.username, (error, validated, user) => {
@@ -99,7 +130,9 @@ router.get('/resend', (req, res, next) => {
       if (error) {
         return next(error)
       } else if (validated) {
-        res.render('info', { message: `This user is already verified` })
+        json
+          ? res.json({ message: `This user is already verified` })
+          : res.render('info', { message: `This user is already verified` })
       } else if (validated === false && user) {
         Email.send(
           user.email,
@@ -109,9 +142,13 @@ router.get('/resend', (req, res, next) => {
             <a href="http://localhost:3000/verify?token=${user.verifyCode}">this link</a> to verify your account</b>`,
           ).catch(error =>  console.warn(error))
 
-        res.render('info', { message: `An email to validated your account was sent to <b>${user.email}</b>` })
+          json
+            ? res.json({ message: `An email to validated your account was sent to ${user.email}`  })
+            : res.render('info', { message: `An email to validated your account was sent to <b>${user.email}</b>` })
       } else if (!user) {
-        res.render('info', { message: `There are no user with this username` })
+        json
+          ? res.json({ message: `There are no user with this username`  })
+          : res.render('info', { message: `There are no user with this username` })
       }
     })
 
@@ -123,20 +160,23 @@ router.get('/resend', (req, res, next) => {
 
 })
 
-router.get('/verify', (req, res, next) => {
+router.get('/verification', (req, res, next) => {
 
   const token = req.query.token
+  const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
   if (token) {
-    User.verify(token, (error, user) => {
+    User.verification(token, (error, user) => {
       if (error || !user) {
         const err = new Error(error)
         err.status = 403
         return next(err)
       } else {
         req.session.userId = user._id
-        res.render('info', { message: `Verification Correct, go to your profile <a type="button" href="/profile">Profile</a>` })
-        // return res.redirect('/profile')
+        json
+          ? res.json({ message: `Verification Correct, go to your profile`})
+          : res.render('info', { message: `Verification Correct, go to your profile <a type="button" href="/profile">Profile</a>` })
+          // return res.redirect('/profile')
       }
     })
   } else {
@@ -149,51 +189,75 @@ router.get('/verify', (req, res, next) => {
 // GET route after registering
 router.get('/profile', requiresLogin, (req, res, next) => {
 
+  const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
+
   User.findById(req.session.userId)
     .exec((error, user) => {
       if (error) {
         return next(error)
       } else if (user !== null) {
-        return res.render('profile', {user})
+        if  (json) {
+          return res.json({user})
+        } else {
+          return res.render('profile', {user})
+        }
       }
     })
 })
 
-router.get('/reset', (req, res, next) => {
+router.get('/password/reset', (req, res, next) => {
+
+  const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
   if (req.query.code) {
     User.resetPassword(req.query.code, (error, newPassword) => {
       if (error) {
         return next(error)
       } else {
-        res.render('info', { message: `Your new password is <b>${newPassword}</b>` })
+        json
+          ? res.json({message: `Your new password is ${newPassword}`})
+          : res.render('info', { message: `Your new password is <b>${newPassword}</b>` })
       }
     })
   } else {
-    res.render('reset')
+    json
+      ? res.json({message: `You must provide a code`})
+      : res.render('reset')
   }
 })
 
-router.post('/reset', (req, res, next) => {
+router.post('/password/reset', (req, res, next) => {
+
+  const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
   if (!req.body.email) {
-    res.render('info', { message: 'Email is a required field' })
+    json
+      ? res.json({ message: 'Email is a required field' })
+      : res.render('info', { message: 'Email is a required field' })
   } else {
     User.reset(req.body.email, (error, user) => {
       if (error) {
         return next(error)
       } else {
-        res.render('info', { message: 'Go to your email to reset your password' })
+        json
+          ? res.json({ message: 'Go to your email to reset your password' })
+          :res.render('info', { message: 'Go to your email to reset your password' })
       }
     })
   }
 })
 
-router.get('/changePassword', requiresLogin, (req, res, next) => {
+router.get('/password/renewal',
+// requiresLogin,
+(req, res, next) => {
   res.render('changePassword')
 })
 
-router.post('/changePassword', requiresLogin, (req, res, next) => {
+router.post('/password/renewal',
+// requiresLogin,
+ (req, res, next) => {
+
+  const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
   if (req.body.newPassword &&
     req.body.repeatPassword &&
@@ -206,7 +270,7 @@ router.post('/changePassword', requiresLogin, (req, res, next) => {
     }
 
     if (req.body.newPassword === req.body.repeatPassword) {
-      User.changePassword({newPassword: req.body.newPassword, oldPassword: req.body.oldPassword, userId: req.session.userId}, (err, user) => {
+      User.renewal({newPassword: req.body.newPassword, oldPassword: req.body.oldPassword, userId: req.session.userId}, (err, user) => {
         if (err) {
           return next(err)
         } else {
@@ -214,7 +278,9 @@ router.post('/changePassword', requiresLogin, (req, res, next) => {
             if (error) {
               return next(error)
             } else {
-              res.render('info', { message: `Password changed correctly <a href="/">Go to Login</a>` })
+              json
+                ? res.json({ message: `Password changed correctly go to /login` })
+                : res.render('info', { message: `Password changed correctly <a href="/">Go to Login</a>` })
             }
           })
         }
@@ -242,6 +308,25 @@ router.get('/logout', (req, res, next) => {
       }
     })
   }
+})
+
+router.get('/groups', async (req, res, next) => {
+  res.json(await Groups.getGroups())
+})
+
+router.post('/groups', async (req, res, next) => {
+  if (req.body && req.body.name) {
+    const members = req.body.members || []
+    await Groups.addGroup(req.body.name, members)
+  }
+})
+
+router.post('/user/:id/groups', async (req, res, next) => {
+  res.json(await Groups.getUserGroups(req.params.id))
+})
+
+router.get('/permissions', async (req, res, next) => {
+  res.json(await Routes.getRoutes({}))
 })
 
 module.exports = router

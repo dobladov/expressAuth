@@ -39,66 +39,146 @@ const UserSchema = new mongoose.Schema({
   }
 })
 
-UserSchema.statics.authenticate = (username, password, callback) => {
-  User.findOne({ username })
-    .exec((error, user) => {
+// UserSchema.statics.authenticate = async (username, password) => {
 
-      if (error) {
-        return callback(error)
-      } else if (!user) {
-        const err = new Error('User not found.')
-        err.status = 401
-        return callback(err)
-      }
+//   try {
+//     const user = await User.findOne({}).exec()
 
-      if (user.verified === false) {
-        return callback(null, false, user)
-      }
+//     if (user) {
 
-      if (user.enabled === false) {
-        const err = new Error('User not active.')
-        err.status = 401
-        return callback(err)
-      }
 
-      bcrypt.compare(password, user.password, (error, result) => {
-        if (result === true) {
-          return callback(null, null, user)
-        } else {
-          const err = new Error('Wrong email or password.')
-          err.status = 401
-          return callback(err)
-        }
-      })
-    })
+//     }
+
+
+//   } catch (error) {
+//     const err = error
+//     err.status = 401
+//     throw err
+//   }
+
+
+//   await User.findOne({ username })
+//     .exec((error, user) => {
+
+//       if (error) {
+//         return callback(error)
+//       } else if (!user) {
+//         const err = new Error('User not found.')
+//         err.status = 401
+//         return callback(err)
+//       }
+
+//       if (user.verified === false) {
+//         return callback(null, false, user)
+//       }
+
+//       if (user.enabled === false) {
+//         const err = new Error('User not active.')
+//         err.status = 401
+//         return callback(err)
+//       }
+
+//       bcrypt.compare(password, user.password, (error, result) => {
+//         if (result === true) {
+//           return callback(null, null, user)
+//         } else {
+//           const err = new Error('Wrong email or password.')
+//           err.status = 401
+//           return callback(err)
+//         }
+//       })
+//     })
+// }
+
+UserSchema.statics.authenticate = async (username, password) => {
+
+  const user = await User.findOne({ username }).exec()
+
+  if (!user) {
+    throw new Error('User not found')
+  }
+
+  if (user && user.verified === false) {
+    throw new Error('User not verified')
+  }
+
+  if (user && user.enabled === false) {
+    throw new Error('User not enabled')
+  }
+
+  const match = await bcrypt.compare(password, user.password)
+
+  if (match === true) {
+    return user
+  } else {
+    throw new Error('Wrong username or password')
+  }
+
 }
 
-UserSchema.statics.verify = (token, callback) => {
-  User.findOne({ verifyCode: token })
-    .exec((error, user) => {
-      if (error) {
-        return callback(error)
-      } else if (!user) {
-        const err = new Error('Token not found.')
-        err.status = 400
-        return callback(err)
+// UserSchema.statics.authenticate = (username, password, callback) => {
+//   User.findOne({ username })
+//     .exec((error, user) => {
+
+//       if (error) {
+//         return callback(error)
+//       } else if (!user) {
+//         const err = new Error('User not found.')
+//         err.status = 401
+//         return callback(err)
+//       }
+
+//       if (user.verified === false) {
+//         return callback(null, false, user)
+//       }
+
+//       if (user.enabled === false) {
+//         const err = new Error('User not active.')
+//         err.status = 401
+//         return callback(err)
+//       }
+
+//       bcrypt.compare(password, user.password, (error, result) => {
+//         if (result === true) {
+//           return callback(null, null, user)
+//         } else {
+//           const err = new Error('Wrong email or password.')
+//           err.status = 401
+//           return callback(err)
+//         }
+//       })
+//     })
+// }
+
+UserSchema.statics.verification = async (token) => {
+
+  try {
+    const user = await User.findOne({ verifyCode: token }).exec()
+
+    if (!user) {
+      const err = new Error('Token not found')
+      err.status = 400
+      throw err
+    } else {
+
+      if (user.verified === true) {
+        const err = new Error('This profile was already verified')
+        err.status = 401
+        throw err
       } else {
-        if (user.verified === true) {
-          const err = new Error('This profile was already verified')
-          err.status = 401
-          return callback(err)
-        } else {
-          User.findByIdAndUpdate(user._id, {verified: true}, false)
-            .exec((err, user) => {
-              if (error) {
-                console.warn(error)
-              } else if (user) {
-                return callback(null, user)
-              }
-            })
+        try {
+          const updatedUser = User.findByIdAndUpdate(user._id, {verified: true}, false)
+          return updatedUser
+        } catch (error) {
+          throw error
         }
       }
-    })
+    }
+  } catch (error) {
+    throw error
+  }
+
+
 }
 
 
@@ -155,7 +235,7 @@ UserSchema.statics.checkUser = (email, username, callback) => {
   })
 }
 
-UserSchema.statics.changePassword = (credentials, callback) => {
+UserSchema.statics.renewal = (credentials, callback) => {
 
   bcrypt.hash(credentials.newPassword, 10, (error, newPassword) => {
 
@@ -217,6 +297,20 @@ UserSchema.statics.resetPassword = (code, callback) => {
     })
   })
 }
+
+
+UserSchema.statics.register = async (email, username, password, verifyCode) => {
+
+  try {
+    const user = User.create({email, username, password, verifyCode})
+    return user
+  } catch (error) {
+    const err = new Error('Error creating the user.')
+    err.status = 400
+    throw err
+  }
+}
+
 
 // Hashing the password before saving it to the database
 UserSchema.pre('save', function (next) {
