@@ -96,38 +96,37 @@ UserSchema.statics.verification = async (token) => {
 }
 
 
-UserSchema.statics.reset = (email, callback) => {
-  User.findOne({ email })
-    .exec((error, user) => {
-      if (error) {
-        return callback(error)
-      } else if (!user) {
-        const err = new Error('User not register')
-        err.status = 401
-        return callback(err)
-      } else {
+UserSchema.statics.reset = async (email) => {
 
-        const resetCode = uuidv4()
+  try {
+    const user = await User.findOne({ email }).exec()
 
-        User.findOneAndUpdate({email}, {$set: {resetCode:resetCode}}, false)
-          .exec((error, user) => {
-            if (error) {
-              console.warn(error)
-            } else if (user) {
-              Email.send(
-                email,
-                "Reset Link ✔",
-                `Go to http://localhost:3000/password/reset?code=${resetCode} to reset your account password`,
-                `<b>Follow
-                  <a href="http://localhost:3000/password/reset?code=${resetCode}">this link</a>
-                  to reset your account password</b>`)
-                .then(info =>  console.info(info))
-                .catch(error =>  console.warn(error))
-              return callback(null, user)
-          }
-        })
+    if (!user) {
+      const err = new Error('User not register')
+      err.status = 401
+      throw err
+    } else {
+      const resetCode = uuidv4()
+
+      try {
+        await User.findOneAndUpdate({email}, {$set: {resetCode:resetCode}}, false).exec()
+        Email.send(
+          email,
+          "Reset Link ✔",
+          `Go to http://localhost:3000/password/reset?code=${resetCode} to reset your account password`,
+          `<b>Follow
+            <a href="http://localhost:3000/password/reset?code=${resetCode}">this link</a>
+            to reset your account password</b>`)
+          .then(info =>  console.info(info))
+          .catch(error =>  console.warn(error))
+          return email
+      } catch (error) {
+        throw error
       }
-    })
+    }
+  } catch (error) {
+    throw error
+  }
 }
 
 

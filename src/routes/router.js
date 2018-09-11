@@ -205,7 +205,6 @@ router.get('/profile', requiresLogin, (req, res, next) => {
 
 router.get('/password/reset', async (req, res, next) => {
 
-  /// if token do different
   const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
   const token = (req.query && req.query.code) || null
 
@@ -231,7 +230,7 @@ router.get('/password/reset', async (req, res, next) => {
   }
 })
 
-router.post('/password/reset', (req, res, next) => {
+router.post('/password/reset', async (req, res, next) => {
 
   const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
@@ -240,15 +239,15 @@ router.post('/password/reset', (req, res, next) => {
       ? res.json({ message: 'Email is a required field' })
       : res.render('info', { message: 'Email is a required field' })
   } else {
-    User.reset(req.body.email, (error, user) => {
-      if (error) {
-        return next(error)
-      } else {
-        json
-          ? res.json({ message: 'Go to your email to reset your password' })
-          :res.render('info', { message: 'Go to your email to reset your password' })
-      }
-    })
+
+    try {
+      const email = await User.reset(req.body.email)
+      json
+        ? res.json({ message: `Go to your email ${email} to reset your password` })
+        : res.render('info', { message: `Go to your email ${email} to reset your password` })
+    } catch (error) {
+      return next(error)
+    }
   }
 })
 
