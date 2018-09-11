@@ -130,22 +130,14 @@ UserSchema.statics.reset = async (email) => {
 }
 
 
-UserSchema.statics.checkUser = (email, username, callback) => {
+UserSchema.statics.checkUser = async (email, username) => {
 
-  User.findOne({$or: [{ email }, { username }]}, (error, user) => {
-    if (error) {
-      return callback(error)
-    } else if (user && user.verified) {
-      console.info("User already register")
-      return callback(null, true, user)
-    } else if (user && !user.verified) {
-      console.info("User not verified")
-      return callback(null, false, user)
-    } else {
-      console.info("No user found")
-      return callback(null, null, null)
-    }
-  })
+  try {
+    const user = await User.findOne({$or: [{ email }, { username }]})
+    return user
+  } catch (error) {
+    throw error
+  }
 }
 
 UserSchema.statics.renewal = async (credentials) => {
@@ -202,26 +194,6 @@ UserSchema.statics.resetPassword = async (token) => {
   } catch (error) {
     throw error
   }
-
-  //   User.findOneAndUpdate({resetCode: token}, {$set: {password: hash, resetCode: null}}, false)
-  //   .exec((err, user) => {
-  //     if (err) {
-  //       console.warn(err)
-  //     } else if (!user) {
-  //       const err = new Error('No user with this code.')
-  //       err.status = 404
-  //       return callback(err)
-  //     } else if (user) {
-  //       Email.send(
-  //         user.email,
-  //         "New password ✔",
-  //         `Your new password is ${newPassword}`,
-  //         `Your new password is <b>${newPassword}</b>`)
-  //         .then(info =>  console.info(info))
-  //         .catch(error =>  console.warn(error))
-  //       return callback(null, newPassword)
-  //     }
-  //   })
 }
 
 

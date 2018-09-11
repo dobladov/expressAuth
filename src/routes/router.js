@@ -30,7 +30,7 @@ router.get('/registration', (req, res, next) => {
   res.render('registration', { title: ' - Registration', user: (req.session && req.session.userId) || null })
 })
 
-router.post('/registration', (req, res, next) => {
+router.post('/registration', async (req, res, next) => {
 
   const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
@@ -54,103 +54,89 @@ router.post('/registration', (req, res, next) => {
       verifyCode
     }
 
-    User.checkUser(req.body.email, req.body.username, async (error, validated, user) => {
+    try {
+      const user = await User.checkUser(req.body.email, req.body.username)
 
-        if (error) {
-          return next(error)
-        } else if (validated) {
+      if (user.verified) {
+        json
+          ? res.json({ message: 'This user is already register' })
+          : res.render('info', { message: 'This user is already register' })
+      } else {
+
+        if (user && user.verified) {
           json
             ? res.json({ message: 'This user is already register' })
             : res.render('info', { message: 'This user is already register' })
-        } else if (validated === false && user) {
+        } else if (user && user.verified === false) {
           json
             ? res.json({ message: `This user is not validated got to /resend?username=${user.username}" to Resend email` })
             : res.render('info', { message: `This user is not validated <a href="/resend?username=${user.username}">Resend email</a>` })
-        } else if (!user) {
-
+        } else {
           try {
-            const user = await User.register(
-              userData.email,
-              userData.username,
-              userData.password,
-              userData.verifyCode
-            )
+            const user = await User.register(userData.email, userData.username, userData.password, userData.verifyCode)
 
-            if (user) {
-              Email.send(
-                req.body.email,
-                `Hello ${userData.username}`,
-                `Go to http://localhost:3000/verification?token=${verifyCode} to verify your account`,
-                `<b>Follow
-                  <a href="http://localhost:3000/verification?token=${verifyCode}">this link</a> to verify your account</b>`,
-              ).catch(error =>  console.warn(error))
+            Email.send(
+              req.body.email,
+              `Hello ${userData.username}`,
+              `Go to http://localhost:3000/verification?token=${verifyCode} to verify your account`,
+              `<b>Follow
+                <a href="http://localhost:3000/verification?token=${verifyCode}">this link</a> to verify your account</b>`,
+            ).catch(error =>  console.warn(error))
 
-              json
-                ? res.json({ message: `A message was sent to ${req.body.email}. Go to your email to verify your account`})
-                : res.render('info', { message: `A message was sent to ${req.body.email}. Go to your email to verify your account` })
-            }
-
+            json
+              ? res.json({ message: `A message was sent to ${req.body.email}. Go to your email to verify your account`})
+              : res.render('info', { message: `A message was sent to ${req.body.email}. Go to your email to verify your account` })
           } catch (error) {
-            next(error)
+            return next(error)
           }
         }
-    })
+      }
+    } catch (error) {
+      return next(error)
+    }
   }
 
-  // NOT USING AUTH FROM UI SO IT'S COMMENTED FOR NOW
-  // else if (req.body.logUsername && req.body.logPassword) {
-  //   User.authenticate(req.body.logUsername, req.body.logPassword, (error, verified, user) => {
-  //     if (error || !user) {
-  //       const err = new Error(error)
-  //       err.status = 401
-  //       return next(err)
-  //     } else if (verified === false && user) {
-  //       res.render('info', { message: `This user is not validated <a href="/resend?username=${user.username}">Resend email</a>` })
-  //     } else {
-  //       req.session.userId = user._id
-  //       return res.redirect('/profile')
-  //     }
-  //   })
-  // }
-   else {
+  else {
     const err = new Error('All fields required.')
     err.status = 400
     return next(err)
   }
 })
 
-router.get('/resend', (req, res, next) => {
+router.get('/resend', async (req, res, next) => {
 
   const json = (req.headers.accept && req.headers.accept.includes('application/json')) || false
 
   if (req.query.username) {
 
-    User.checkUser('', req.query.username, (error, validated, user) => {
+    try {
+      const user = await User.checkUser('', req.query.username)
 
-      if (error) {
-        return next(error)
-      } else if (validated) {
-        json
-          ? res.json({ message: `This user is already verified` })
-          : res.render('info', { message: `This user is already verified` })
-      } else if (validated === false && user) {
-        Email.send(
-          user.email,
-          `Hello ${user.username}`,
-          `Go to http://localhost:3000/verify?token=${user.verifyCode} to verify your account`,
-          `<b>Follow
-            <a href="http://localhost:3000/verify?token=${user.verifyCode}">this link</a> to verify your account</b>`,
-          ).catch(error =>  console.warn(error))
-
-          json
-            ? res.json({ message: `An email to validated your account was sent to ${user.email}`  })
-            : res.render('info', { message: `An email to validated your account was sent to <b>${user.email}</b>` })
-      } else if (!user) {
+      if (!user) {
         json
           ? res.json({ message: `There are no user with this username`  })
           : res.render('info', { message: `There are no user with this username` })
+      } else if (user && user.verified) {
+        json
+          ? res.json({ message: `This user is already verified` })
+          : res.render('info', { message: `This user is already verified` })
+      } else if (user && user.verified === false) {
+        Email.send(
+          user.email,
+          `Hello ${user.username}`,
+          `Go to http://localhost:3000/verification?token=${user.verifyCode} to verify your account`,
+          `<b>Follow
+            <a href="http://localhost:3000/verification?token=${user.verifyCode}">this link</a> to verify your account</b>`,
+        ).catch(error =>  console.warn(error))
+
+        json
+          ? res.json({ message: `An email to validated your account was sent to ${user.email}`  })
+          : res.render('info', { message: `An email to validated your account was sent to <b>${user.email}</b>` })
       }
-    })
+
+    } catch (error) {
+      return next(error)
+    }
 
   } else {
     const err = new Error('A username is required')
