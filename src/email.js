@@ -12,15 +12,14 @@ const transporter = nodemailer.createTransport({
 const email =  {
 
   send: async (to, subject, text, html) => {
-    transporter.sendMail({
-      from: `${process.env.EMAIL_IDENTITY} <${process.env.EMAIL_USER}>`,
-      to, subject, text, html
-    }).then(info => info)
-    .catch(error => {
-      const err = new Error(error)
-      err.status = 400
-      throw new Error(err)
-    })
+    try {
+      await transporter.sendMail({
+        from: `${process.env.EMAIL_IDENTITY} <${process.env.EMAIL_USER}>`,
+        to, subject, text, html
+      })
+    } catch (error) {
+      console.warn(error)
+    }
   }
 }
 

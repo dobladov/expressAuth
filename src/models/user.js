@@ -110,16 +110,18 @@ UserSchema.statics.reset = async (email) => {
 
       try {
         await User.findOneAndUpdate({email}, {$set: {resetCode:resetCode}}, false).exec()
-        Email.send(
-          email,
-          "Reset Link ✔",
-          `Go to http://localhost:3000/password/reset?code=${resetCode} to reset your account password`,
-          `<b>Follow
-            <a href="http://localhost:3000/password/reset?code=${resetCode}">this link</a>
-            to reset your account password</b>`)
-          .then(info =>  console.info(info))
-          .catch(error =>  console.warn(error))
-          return email
+        try {
+          await Email.send(
+            email,
+            "Reset Link ✔",
+            `Go to http://localhost:3000/password/reset?code=${resetCode} to reset your account password`,
+            `<b>Follow
+              <a href="http://localhost:3000/password/reset?code=${resetCode}">this link</a>
+              to reset your account password</b>`)
+        } catch (error) {
+          console.warn(error)
+        }
+        return email
       } catch (error) {
         throw error
       }
@@ -180,13 +182,15 @@ UserSchema.statics.resetPassword = async (token) => {
       err.status = 404
       throw err
     } else {
-      Email.send(
-        user.email,
-        "New password ✔",
-        `Your new password is ${newPassword}`,
-        `Your new password is <b>${newPassword}</b>`)
-        .then(info =>  console.info(info))
-        .catch(error =>  console.warn(error))
+      try {
+        await Email.send(
+          user.email,
+          "New password ✔",
+          `Your new password is ${newPassword}`,
+          `Your new password is <b>${newPassword}</b>`)
+      } catch (error) {
+        console.warn(error)
+      }
       return newPassword
     }
   } catch (error) {
