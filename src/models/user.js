@@ -173,8 +173,6 @@ UserSchema.statics.resetPassword = async (token) => {
   const hash = await bcrypt.hash(newPassword, 10)
 
   try {
-    console.log(token);
-
     const user = await User.findOneAndUpdate({resetCode: token}, {$set: {password: hash, resetCode: null}}, false).exec()
 
     if (!user) {
