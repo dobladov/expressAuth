@@ -4,6 +4,7 @@ const mongoose = require('mongoose')
 mongoose.connect(`mongodb://${process.env.NODE_ENV === 'test'
   ? `${process.env.DB_STRING}Test`
   : process.env.DB_STRING}`, { useNewUrlParser: true })
+mongoose.set('useCreateIndex', true)
 const db = mongoose.connection
 
 // Handle mongo connection error
