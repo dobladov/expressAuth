@@ -1,13 +1,37 @@
 const http = require('http')
+const URL = require('url')
 const User = require('./models/user')
 const Routes = require('./models/routes')
+const Path = require('path-parser').default
 
 require('./database')
 
-// const targets = {
-//   '/foo': 'http://example.org:8080/foo/bar'
-// }
+const targets = [
+  {
+    'path': '/page/:id',
+    'target': 'http://localhost:3000/profile/:id',
+    'conditions': {
+      'methods': ['GET', 'POST'],
+      'headers': {
+        'accept': 'application/json'
+      }
+    }
+  },
+  {
+    'path': '/registration',
+    'target': 'http://localhost:3000/registration'
+  },
+  {
+    'path': '/',
+    'target': 'http://localhost:3000/'
+  },
+  // {
+  //   'path': '/*page',
+  //   'target': 'http://localhost:3000/*page'
+  // }
+]
 
+// Extracts the username and password from the authorization header
 const extractCredentials = async (authorization) => {
 
   const credentials = (authorization
@@ -28,6 +52,7 @@ const extractCredentials = async (authorization) => {
 
 }
 
+// Checks if the given permission is satisfied
 const checkPermission = async (user, permission) => {
 
   // 'Require valid-user'
@@ -75,7 +100,7 @@ const evaluate = async (user, route) => {
   route.permissions.forEach(permission => {
     const contents = checkPermission(user, permission)
     checksRoute.push(contents)
-    console.log("For:", permission, contents)
+    console.log("For:", route.url, route.method, permission, contents)
   })
 
   return Promise.all(checksRoute).then((values) => {
@@ -85,46 +110,84 @@ const evaluate = async (user, route) => {
   })
 }
 
+// Returns the first matching target
+// adding the passed parameters
+const getTarget = async (url, method, headers) => {
+
+  for (const target of targets) {
+    const path = new Path(target.path)
+    const test = path.test(url)
+
+    if (test) {
+      const targetURL = URL.parse(target.target)
+      const targetPath = new Path(targetURL.path)
+
+      if (target.conditions && target.conditions.methods && !target.conditions.methods.includes(method)) {
+        continue
+      }
+
+      if (target.conditions && target.conditions.headers) {
+        const requiredHeaders = target.conditions.headers
+        const matchHeaders = Object.keys(requiredHeaders).filter(header => Object.keys(headers).includes(header))
+
+        if (!matchHeaders || !matchHeaders.every(header => requiredHeaders[header] === headers[header])) {
+          continue
+        }
+      }
+
+      return `${targetURL.protocol}//${targetURL.host}${targetPath.build(test)}`
+    }
+  }
+
+  throw new Error(`No targets to ${url}`)
+}
+
+
 const proxy = async (clientReq, clientRes) => {
 
   try {
+    const target = await getTarget(clientReq.url, clientReq.method, clientReq.headers)
+
+    console.log({target})
+
     const {username, password} = await extractCredentials(clientReq.headers && clientReq.headers.authorization)
     const user = await User.authenticate(username, password)
     const { routes } = await Routes.getRoutes()
 
-    const filteredRoutes = routes
-      .filter(route => route.method === clientReq.method)
-      .filter(route => route.url.startsWith(clientReq.url))
+    // const filteredRoutes = routes
+    //   .filter(route => route.method === clientReq.method)
+    //   .filter(route => route.url.startsWith(clientReq.url))
 
-    // CHeck if filtered routes matches any
-    // Error if no route can match it
+    // // CHeck if filtered routes matches any
+    // // Error if no route can match it
 
-    const forwardREQUEST = await evaluate(user, filteredRoutes.slice(-1).pop())
+    // const forwardREQUEST = await evaluate(user, filteredRoutes.slice(-1).pop())
 
-    if (forwardREQUEST) {
-      const proxyReq = http.request({
-        host: '192.168.2.46', // We need some logic for this to get from targets
-        port: 8080,
-        path: clientReq.url,
-        method: clientReq.method,
-        headers: clientReq.headers // add custom header stuff here
-      })
+    // if (forwardREQUEST) {
+    //   const proxyReq = http.request({
+    //     protocol: target.protocol,
+    //     host: target.hostname,
+    //     port: target.port,
+    //     path: target.path,
+    //     method: clientReq.method,
+    //     headers: clientReq.headers
+    //   })
 
-      proxyReq.setHeader('X-user', JSON.stringify(user))
+    //   proxyReq.setHeader('X-user', JSON.stringify(user))
 
-      proxyReq.on('error', error => {
-        console.warn("Error requesting target:", error.message)
-        clientRes.writeHead(400, { 'Content-Type': 'text/plain' })
-        clientRes.end(`Bad Request: ${error.message}`)
-      })
+    //   proxyReq.on('error', error => {
+    //     console.warn("Error requesting target:", error.message)
+    //     clientRes.writeHead(400, { 'Content-Type': 'text/plain' })
+    //     clientRes.end(`Bad Request: ${error.message}`)
+    //   })
 
-      proxyReq.on('response', proxyRes => {
-        proxyRes.pipe(clientRes).on('finish', () => clientRes.end())
-      })
-      proxyReq.end()
-    } else {
-      throw new Error("The user is not allowed to access this route")
-    }
+    //   proxyReq.on('response', proxyRes => {
+    //     proxyRes.pipe(clientRes).on('finish', () => clientRes.end())
+    //   })
+    //   proxyReq.end()
+    // } else {
+    //   throw new Error("The user is not allowed to access this route")
+    // }
 
   } catch (error) {
     console.warn(error.message)
@@ -137,5 +200,5 @@ const server = http.createServer(proxy)
 
 server.listen(process.env.PROXY_PORT, err => err
   ? console.error(err)
-  : console.log(`Proxy listeing on port ${process.env.PROXY_PORT}`)
+  : console.info(`Proxy listeing on port ${process.env.PROXY_PORT}`)
 )
