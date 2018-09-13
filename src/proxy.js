@@ -217,3 +217,5 @@ server.listen(process.env.PROXY_PORT, err => err
   ? console.error(err)
   : console.info(`Proxy listeing on port ${process.env.PROXY_PORT}`)
 )
+
+module.exports = {extractCredentials, checkPermission, evaluate, getTarget, targets}
