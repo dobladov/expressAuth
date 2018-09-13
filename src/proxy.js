@@ -2,6 +2,7 @@ const http = require('http')
 const URL = require('url')
 const User = require('./models/user')
 const Routes = require('./models/routes')
+const Groups = require('./models/groups')
 const Path = require('path-parser').default
 
 require('./database')
@@ -168,6 +169,11 @@ const proxy = async (clientReq, clientRes) => {
       .filter(route => route.method === clientReq.method)
       .filter(route => route.url.startsWith(clientReq.url))
 
+    if (!filteredRoutes.length) {
+      console.warn('Not allowed to:', target.href, clientReq.method, user)
+      throw Error('No routes matching in the database') // Hide this error from users
+    }
+
     const forwardREQUEST = await evaluate(user, filteredRoutes.slice(-1).pop())
 
     if (forwardREQUEST) {
@@ -194,6 +200,7 @@ const proxy = async (clientReq, clientRes) => {
       })
       proxyReq.end()
     } else {
+      console.log('Not allowed', {user, methdod: clientReq.method, target: target.href})
       throw new Error("The user is not allowed to access this route")
     }
 
