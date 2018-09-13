@@ -128,9 +128,13 @@ const getTarget = async (url, method, headers) => {
 
       if (target.conditions && target.conditions.headers) {
         const requiredHeaders = target.conditions.headers
-        const matchHeaders = Object.keys(requiredHeaders).filter(header => Object.keys(headers).includes(header))
+        const matchHeaders = []
 
-        if (!matchHeaders || !matchHeaders.every(header => requiredHeaders[header] === headers[header])) {
+        for (const [key, value] of Object.entries(requiredHeaders)) {
+          matchHeaders.push({requiredHeader: value, clientHeader: headers[key]})
+        }
+
+        if (!matchHeaders.length || !matchHeaders.every(header => header.clientHeader === header.requiredHeader)) {
           continue
         }
       }
