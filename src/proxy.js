@@ -70,7 +70,7 @@ const checkPermission = async (user, permission) => {
 
   // // 'Require group admin
   // // Check if the user is member of the group
-  if (/Require group (.*)/g.test(permission)) {
+  if (user && /Require group (.*)/g.test(permission)) {
     const group = /Require group (.*)/g.exec(permission)[1]
     const response = await Groups.getUserInGroup(user.username, group)
     if (response && response.length) {
@@ -81,7 +81,7 @@ const checkPermission = async (user, permission) => {
 
   // // 'Require user testingdev'
   // Check if the user is the one required
-  if (/Require user (.*)/g.test(permission)) {
+  if (user && /Require user (.*)/g.test(permission)) {
     const userRequired = /Require user (.*)/g.exec(permission)[1]
     return user.username === userRequired ? true : false
   }
@@ -139,7 +139,7 @@ const getTarget = async (url, method, headers) => {
         }
       }
 
-      return `${targetURL.protocol}//${targetURL.host}${targetPath.build(test)}`
+      return URL.parse(`${targetURL.protocol}//${targetURL.host}${targetPath.build(test)}`)
     }
   }
 
@@ -152,46 +152,50 @@ const proxy = async (clientReq, clientRes) => {
   try {
     const target = await getTarget(clientReq.url, clientReq.method, clientReq.headers)
 
-    console.log({target})
+    let user = null
+    if (clientReq.headers.authorization) {
+      try {
+        const {username, password} = await extractCredentials(clientReq.headers && clientReq.headers.authorization)
+        user = await User.authenticate(username, password)
+      } catch (error) {
+        throw error
+      }
+    }
 
-    const {username, password} = await extractCredentials(clientReq.headers && clientReq.headers.authorization)
-    const user = await User.authenticate(username, password)
     const { routes } = await Routes.getRoutes()
 
-    // const filteredRoutes = routes
-    //   .filter(route => route.method === clientReq.method)
-    //   .filter(route => route.url.startsWith(clientReq.url))
+    const filteredRoutes = routes
+      .filter(route => route.method === clientReq.method)
+      .filter(route => route.url.startsWith(clientReq.url))
 
-    // // CHeck if filtered routes matches any
-    // // Error if no route can match it
+    const forwardREQUEST = await evaluate(user, filteredRoutes.slice(-1).pop())
 
-    // const forwardREQUEST = await evaluate(user, filteredRoutes.slice(-1).pop())
+    if (forwardREQUEST) {
+      console.log('Requesting target:', target.href)
+      const proxyReq = http.request({
+        protocol: target.protocol,
+        host: target.hostname,
+        port: target.port,
+        path: target.path,
+        method: clientReq.method,
+        headers: clientReq.headers
+      })
 
-    // if (forwardREQUEST) {
-    //   const proxyReq = http.request({
-    //     protocol: target.protocol,
-    //     host: target.hostname,
-    //     port: target.port,
-    //     path: target.path,
-    //     method: clientReq.method,
-    //     headers: clientReq.headers
-    //   })
+      proxyReq.setHeader('X-user', JSON.stringify(user))
 
-    //   proxyReq.setHeader('X-user', JSON.stringify(user))
+      proxyReq.on('error', error => {
+        console.warn("Error requesting target:", error.message)
+        clientRes.writeHead(400, { 'Content-Type': 'text/plain' })
+        clientRes.end(`Bad Request: ${error.message}`)
+      })
 
-    //   proxyReq.on('error', error => {
-    //     console.warn("Error requesting target:", error.message)
-    //     clientRes.writeHead(400, { 'Content-Type': 'text/plain' })
-    //     clientRes.end(`Bad Request: ${error.message}`)
-    //   })
-
-    //   proxyReq.on('response', proxyRes => {
-    //     proxyRes.pipe(clientRes).on('finish', () => clientRes.end())
-    //   })
-    //   proxyReq.end()
-    // } else {
-    //   throw new Error("The user is not allowed to access this route")
-    // }
+      proxyReq.on('response', proxyRes => {
+        proxyRes.pipe(clientRes).on('finish', () => clientRes.end())
+      })
+      proxyReq.end()
+    } else {
+      throw new Error("The user is not allowed to access this route")
+    }
 
   } catch (error) {
     console.warn(error.message)
