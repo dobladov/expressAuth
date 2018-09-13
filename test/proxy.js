@@ -1,5 +1,6 @@
-const { extractCredentials } = require('../src/proxy')
 const assert = require('assert')
+const { extractCredentials, checkPermission } = require('../src/proxy')
+const dummyUser = require('./resources/dummyUser')
 
 const authorization = "Basic dGVzdGluZ2RldjpwYXNz"
 
@@ -35,5 +36,23 @@ describe('Proxy', () => {
       }
     })
 
+  })
+
+  describe('Check Permission', () => {
+
+    it ('Should respond with the correct check', async () => {
+      assert.equal(await checkPermission(null, "Require valid-user"), false)
+      assert.equal(await checkPermission(dummyUser, "Require valid-user"), true)
+
+      assert.equal(await checkPermission(null, "Require all granted"), true)
+      assert.equal(await checkPermission(null, "Require all denied"), false)
+      assert.equal(await checkPermission(dummyUser, "Require all granted"), true)
+      assert.equal(await checkPermission(dummyUser, "Require all denied"), false)
+
+      assert.equal(await checkPermission(dummyUser, "Require user fakeuser"), false)
+      assert.equal(await checkPermission(dummyUser, "Require user testuser"), true)
+
+      // Add checks for requires group
+    })
   })
 })
