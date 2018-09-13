@@ -10,7 +10,7 @@ require('./database')
 const targets = [
   {
     'path': '/page/:id',
-    'target': 'http://localhost:3000/profile/:id',
+    'target': 'http://localhost:3000/posts/:id',
     'conditions': {
       'methods': ['GET', 'POST'],
       'headers': {
@@ -167,7 +167,7 @@ const proxy = async (clientReq, clientRes) => {
 
     const filteredRoutes = routes
       .filter(route => route.method === clientReq.method)
-      .filter(route => route.url.startsWith(clientReq.url))
+      .filter(route => new Path(route.url).test(target.path))
 
     if (!filteredRoutes.length) {
       console.warn('Not allowed to:', target.href, clientReq.method, user)
