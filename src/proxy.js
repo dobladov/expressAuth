@@ -5,8 +5,6 @@ const Routes = require('./models/routes')
 const Groups = require('./models/groups')
 const Path = require('path-parser').default
 
-require('./database')
-
 const targets = [
   {
     'path': '/page/:id',
@@ -211,11 +209,16 @@ const proxy = async (clientReq, clientRes) => {
   }
 }
 
-const server = http.createServer(proxy)
+const startProxy = () => {
 
-server.listen(process.env.PROXY_PORT, err => err
-  ? console.error(err)
-  : console.info(`Proxy listeing on port ${process.env.PROXY_PORT}`)
-)
+  require('./database')
 
-module.exports = {extractCredentials, checkPermission, evaluate, getTarget, targets}
+  const server = http.createServer(proxy)
+
+  server.listen(process.env.PROXY_PORT, err => err
+    ? console.error(err)
+    : console.info(`Proxy listeing on port ${process.env.PROXY_PORT}`)
+  )
+}
+
+module.exports = {extractCredentials, checkPermission, evaluate, getTarget, targets, startProxy}
