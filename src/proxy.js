@@ -92,6 +92,10 @@ const checkPermission = async (user, permission) => {
 // returns true or false if the user can access   it
 const evaluate = async (user, route) => {
 
+  if (!route) {
+    return false
+  }
+
   let allowed = false
 
   const checksRoute = []
@@ -99,12 +103,10 @@ const evaluate = async (user, route) => {
   route.permissions.forEach(permission => {
     const contents = checkPermission(user, permission)
     checksRoute.push(contents)
-    console.log("For:", route.url, route.method, permission, contents)
   })
 
   return Promise.all(checksRoute).then((values) => {
     allowed = values.includes(true) ? true : false
-    console.log("Checks of route:", values, allowed)
     return allowed
   })
 }

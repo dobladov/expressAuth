@@ -1,8 +1,10 @@
 const dotenv = require('dotenv')
 const assert = require('assert')
-const { extractCredentials, checkPermission, getTarget, targets } = require('../src/proxy')
+const { extractCredentials, checkPermission, getTarget, targets, evaluate } = require('../src/proxy')
 const dummyUser = require('./resources/dummyUser')
+const dummyRoutes = require('./resources/dummyRoutes')
 const Groups = require('../src/models/groups')
+const Routes = require('../src/models/routes')
 
 dotenv.config()
 
@@ -97,5 +99,49 @@ describe('Proxy', () => {
         assert.equal(error.message, 'No targets to /page/12345')
       }
     })
+  })
+
+  describe('Check for evaluate', () => {
+
+    it ('THe user is allowed should return true', async () => {
+      await Routes.deleteMany()
+      await Routes.create({routes: []})
+      await Routes.setRoutes(dummyRoutes)
+      const allowed = await evaluate(dummyUser, dummyRoutes[1])
+      assert.equal(allowed, true)
+    })
+
+    it ('The user is not allowed shoud return false', async () => {
+      await Routes.deleteMany()
+      await Routes.create({routes: []})
+      await Routes.setRoutes(dummyRoutes)
+      const allowed = await evaluate(dummyUser, dummyRoutes[0])
+      assert.equal(allowed, false)
+    })
+
+    it ('Nobody is allowed, shoud return false', async () => {
+      await Routes.deleteMany()
+      await Routes.create({routes: []})
+      await Routes.setRoutes(dummyRoutes)
+      const allowed = await evaluate(dummyUser, dummyRoutes[2])
+      assert.equal(allowed, false)
+    })
+
+    it ('The user is not the required, shoud return false', async () => {
+      await Routes.deleteMany()
+      await Routes.create({routes: []})
+      await Routes.setRoutes(dummyRoutes)
+      const allowed = await evaluate(dummyUser, dummyRoutes[3])
+      assert.equal(allowed, false)
+    })
+
+    it ('Should return false withour a route', async () => {
+      await Routes.deleteMany()
+      await Routes.create({routes: []})
+      await Routes.setRoutes(dummyRoutes)
+      const allowed = await evaluate(dummyUser, null)
+      assert.equal(allowed, false)
+    })
+
   })
 })

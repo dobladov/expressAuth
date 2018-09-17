@@ -1,40 +1,9 @@
+const assert = require('assert')
 const dotenv = require('dotenv')
 dotenv.config()
 
 const Routes = require('../src/models/routes')
-
-const dummyRoutes = [
-  {
-      "permissions" : [
-          "Require user testingdev"
-      ],
-      "url" : "/",
-      "method" : "GET"
-  },
-  {
-      "permissions" : [
-          "Require valid-user"
-      ],
-      "url" : "/log/",
-      "method" : "GET"
-  },
-  {
-      "permissions" : [
-          "Require all denied"
-      ],
-      "url" : "/",
-      "method" : "POST"
-  },
-  {
-      "permissions" : [
-          "Require user literaymachine"
-      ],
-      "url" : "/literaymachine/",
-      "method" : "POST"
-  }
-]
-
-const assert = require('assert')
+const dummyRoutes = require('./resources/dummyRoutes')
 
 require('../src/database')
 
