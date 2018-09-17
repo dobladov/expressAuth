@@ -6,7 +6,7 @@
   "license": "none",
   "scripts": {
     "start": "NODE_ENV=development node src/app",
-    "test": "NODE_ENV=test mocha test/*"
+    "test": "NODE_ENV=test mocha --timeout 10000 test/*"
   },
   "dependencies": {
     "bcrypt": "^3.0.0",
