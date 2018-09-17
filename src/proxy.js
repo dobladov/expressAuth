@@ -111,7 +111,7 @@ const evaluate = async (user, route) => {
 
 // Returns the first matching target
 // adding the passed parameters
-const getTarget = async (url, method, headers) => {
+const getTarget = async (url, method, headers, targets) => {
 
   for (const target of targets) {
     const path = new Path(target.path)
@@ -149,7 +149,7 @@ const getTarget = async (url, method, headers) => {
 const proxy = async (clientReq, clientRes) => {
 
   try {
-    const target = await getTarget(clientReq.url, clientReq.method, clientReq.headers)
+    const target = await getTarget(clientReq.url, clientReq.method, clientReq.headers, targets)
 
     let user = null
     if (clientReq.headers.authorization) {

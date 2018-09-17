@@ -1,6 +1,6 @@
 const dotenv = require('dotenv')
 const assert = require('assert')
-const { extractCredentials, checkPermission } = require('../src/proxy')
+const { extractCredentials, checkPermission, getTarget, targets } = require('../src/proxy')
 const dummyUser = require('./resources/dummyUser')
 const Groups = require('../src/models/groups')
 
@@ -63,6 +63,39 @@ describe('Proxy', () => {
       assert.equal(await checkPermission(dummyUser, "Require grpup fakegroup"), false)
       assert.equal(await checkPermission(dummyUser, "Require group dummyGroup"), true)
       await Groups.deleteMany()
+    })
+  })
+
+  describe('Check for get Target', () => {
+
+    it ('Should return a route to /', async () => {
+      const route = await getTarget('/', 'GET', {}, targets)
+      assert.equal(route.href, 'http://localhost:3000/')
+    })
+
+    it ('Should throw error no route', async () => {
+      try {
+        await getTarget('/wrongroute', 'GET', {}, targets)
+        assert.fail()
+      } catch (error) {
+        assert.equal(error.message, 'No targets to /wrongroute')
+      }
+    })
+
+    it ('Should retrunr a route to /posts/12345', async () => {
+        const route = await getTarget('/page/12345', 'GET', {
+          accept: 'application/json'
+        }, targets)
+        assert.equal(route.href, 'http://localhost:3000/posts/12345')
+    })
+
+    it ('Should throw error because the header is not pressent', async () => {
+      try {
+        await getTarget('/page/12345', 'GET', {}, targets)
+        assert.fail()
+      } catch (error) {
+        assert.equal(error.message, 'No targets to /page/12345')
+      }
     })
   })
 })
