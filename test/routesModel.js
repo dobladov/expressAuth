@@ -42,7 +42,7 @@ describe('Routes Model', async () => {
 
   it ('Should delete all routes and create and empty array', async () => {
     try {
-      await Routes.remove()
+      await Routes.deleteMany()
       const allRoutes = await Routes.create({routes: []})
       assert(allRoutes.routes)
     } catch (error) {

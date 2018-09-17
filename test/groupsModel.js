@@ -15,7 +15,7 @@ describe('Groups Model', () => {
 
   it ('Should get all groups', async () => {
     try {
-      await Groups.remove()
+      await Groups.deleteMany()
       const groups = await Groups.getGroups()
       assert.ok(groups)
     } catch (error) {
