@@ -1,6 +1,12 @@
+const dotenv = require('dotenv')
 const assert = require('assert')
 const { extractCredentials, checkPermission } = require('../src/proxy')
 const dummyUser = require('./resources/dummyUser')
+const Groups = require('../src/models/groups')
+
+dotenv.config()
+
+require('../src/database')
 
 const authorization = "Basic dGVzdGluZ2RldjpwYXNz"
 
@@ -52,7 +58,11 @@ describe('Proxy', () => {
       assert.equal(await checkPermission(dummyUser, "Require user fakeuser"), false)
       assert.equal(await checkPermission(dummyUser, "Require user testuser"), true)
 
-      // Add checks for requires group
+      await Groups.deleteMany()
+      await await Groups.addGroup('dummyGroup', [dummyUser.username])
+      assert.equal(await checkPermission(dummyUser, "Require grpup fakegroup"), false)
+      assert.equal(await checkPermission(dummyUser, "Require group dummyGroup"), true)
+      await Groups.deleteMany()
     })
   })
 })
