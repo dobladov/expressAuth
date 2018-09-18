@@ -135,6 +135,14 @@ describe('Proxy', () => {
       assert.equal(allowed, false)
     })
 
+    it ('Check multiple permissions, shoud return true', async () => {
+      await Routes.deleteMany()
+      await Routes.create({routes: []})
+      await Routes.setRoutes(dummyRoutes)
+      const allowed = await evaluate(dummyUser, dummyRoutes[4])
+      assert.equal(allowed, true)
+    })
+
     it ('Should return false withour a route', async () => {
       await Routes.deleteMany()
       await Routes.create({routes: []})

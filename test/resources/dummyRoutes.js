@@ -21,10 +21,18 @@ const dummyRoutes = [
       "method" : "POST"
   },
   {
+    "permissions" : [
+        "Require user literaymachine",
+    ],
+    "url" : "/literaymachine/",
+    "method" : "POST"
+  },
+  {
       "permissions" : [
-          "Require user literaymachine"
+          "Require user literaymachine",
+          "Require user testuser"
       ],
-      "url" : "/literaymachine/",
+      "url" : "/test",
       "method" : "POST"
   }
 ]
