@@ -82,8 +82,7 @@ UserSchema.statics.verification = async (token) => {
         throw err
       } else {
         try {
-          const updatedUser = User.findByIdAndUpdate(user._id, {verified: true}, false)
-          return updatedUser
+          return User.findByIdAndUpdate(user._id, {verified: true}, false)
         } catch (error) {
           throw error
         }
@@ -135,8 +134,7 @@ UserSchema.statics.reset = async (email) => {
 UserSchema.statics.checkUser = async (email, username) => {
 
   try {
-    const user = await User.findOne({$or: [{ email }, { username }]})
-    return user
+    return await User.findOne({$or: [{ email }, { username }]})
   } catch (error) {
     throw error
   }
@@ -202,8 +200,7 @@ UserSchema.statics.resetPassword = async (token) => {
 UserSchema.statics.register = async (email, username, password, verifyCode) => {
 
   try {
-    const user = User.create({email, username, password, verifyCode})
-    return user
+    return User.create({email, username, password, verifyCode})
   } catch (error) {
     const err = new Error('Error creating the user.')
     err.status = 400
