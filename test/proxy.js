@@ -104,49 +104,36 @@ describe('Proxy', () => {
   describe('Check for evaluate', () => {
 
     it ('THe user is allowed should return true', async () => {
-      await Routes.deleteMany()
-      await Routes.create({routes: []})
-      await Routes.setRoutes(dummyRoutes)
       const allowed = await evaluate(dummyUser, dummyRoutes[1])
       assert.equal(allowed, true)
     })
 
     it ('The user is not allowed shoud return false', async () => {
-      await Routes.deleteMany()
-      await Routes.create({routes: []})
-      await Routes.setRoutes(dummyRoutes)
       const allowed = await evaluate(dummyUser, dummyRoutes[0])
       assert.equal(allowed, false)
     })
 
     it ('Nobody is allowed, shoud return false', async () => {
-      await Routes.deleteMany()
-      await Routes.create({routes: []})
-      await Routes.setRoutes(dummyRoutes)
       const allowed = await evaluate(dummyUser, dummyRoutes[2])
       assert.equal(allowed, false)
     })
 
     it ('The user is not the required, shoud return false', async () => {
-      await Routes.deleteMany()
-      await Routes.create({routes: []})
-      await Routes.setRoutes(dummyRoutes)
       const allowed = await evaluate(dummyUser, dummyRoutes[3])
       assert.equal(allowed, false)
     })
 
     it ('Check multiple permissions, shoud return true', async () => {
-      await Routes.deleteMany()
-      await Routes.create({routes: []})
-      await Routes.setRoutes(dummyRoutes)
       const allowed = await evaluate(dummyUser, dummyRoutes[4])
       assert.equal(allowed, true)
     })
 
+    it ('Check multiple permissions and no user passed, shoud return false', async () => {
+      const allowed = await evaluate(null, dummyRoutes[4])
+      assert.equal(allowed, false)
+    })
+
     it ('Should return false withour a route', async () => {
-      await Routes.deleteMany()
-      await Routes.create({routes: []})
-      await Routes.setRoutes(dummyRoutes)
       const allowed = await evaluate(dummyUser, null)
       assert.equal(allowed, false)
     })
